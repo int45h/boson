@@ -1,5 +1,7 @@
 textures/*
 textures
+shaders/*
+shaders
 stb/*
 stb
 main
