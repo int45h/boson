@@ -3,9 +3,9 @@
 
 #include <time.h>
 
-#include "../renderer/include/boson_window.h"
-#include "../io/include/boson_io.h"
-#include "../glm_lite/glm.h"
+#include "../../renderer/include/boson_window.h"
+#include "../../io/include/boson_io.h"
+#include "../../glm_lite/glm.h"
 
 #define tolower(x) x & 0x20
 
