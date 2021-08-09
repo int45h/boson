@@ -1,9 +1,8 @@
 #include "../include/boson_io.h"
 
 /* 
-Reads in a file stream without seeking to the end of the file.
-
-Reads seqential chunks into a stream until it can't anymore.
+Reads seqential chunks into a stream until it can't anymore,
+avoids seeking because pipes and sockets aren't seekable.
 
 From https://stackoverflow.com/questions/14002954/c-programming-how-to-read-the-whole-file-contents-into-a-buffer 
 */
@@ -19,11 +18,14 @@ bIOError bReadByteStream(FILE *in, uint8_t **dataptr, size_t *sizeptr)
 
     /* None of the parameters can be NULL. */
     if (in == NULL || dataptr == NULL || sizeptr == NULL)
-        return READALL_INVALID;
+        return B_READALL_INVALID;
 
     /* A read error already occurred? */
     if (ferror(in))
-        return READALL_ERROR;
+    {
+        fprintf(stderr, "error: %s\n", strerror(errno));
+        return B_READALL_ERROR;
+    }
 
     /* Read until no longer possible */
     do
@@ -37,7 +39,7 @@ bIOError bReadByteStream(FILE *in, uint8_t **dataptr, size_t *sizeptr)
             if (size <= used) 
             {
                 free(data);
-                return READALL_TOOMUCH;
+                return B_READALL_TOOMUCH;
             }
 
             temp = realloc(data, size);
@@ -45,7 +47,7 @@ bIOError bReadByteStream(FILE *in, uint8_t **dataptr, size_t *sizeptr)
             if (temp == NULL) 
             {
                 free(data);
-                return READALL_NOMEM;
+                return B_READALL_NOMEM;
             }
             data = temp;
         }
@@ -61,14 +63,14 @@ bIOError bReadByteStream(FILE *in, uint8_t **dataptr, size_t *sizeptr)
     if (ferror(in)) 
     {
         free(data);
-        return READALL_ERROR;
+        return B_READALL_ERROR;
     }
 
     temp = realloc(data, used + 1);
     if (temp == NULL) 
     {
         free(data);
-        return READALL_NOMEM;
+        return B_READALL_NOMEM;
     }
     data = temp;
     //data[used] = '\0';
@@ -76,7 +78,7 @@ bIOError bReadByteStream(FILE *in, uint8_t **dataptr, size_t *sizeptr)
     *dataptr = data;
     *sizeptr = used;
 
-    return READALL_OK;
+    return B_READALL_OK;
 }
 
 bIOError bReadCharStream(FILE *in, char **dataptr, size_t *sizeptr)
@@ -91,11 +93,14 @@ bIOError bReadCharStream(FILE *in, char **dataptr, size_t *sizeptr)
 
     /* None of the parameters can be NULL. */
     if (in == NULL || dataptr == NULL || sizeptr == NULL)
-        return READALL_INVALID;
+        return B_READALL_INVALID;
 
     /* A read error already occurred? */
     if (ferror(in))
-        return READALL_ERROR;
+    {
+        fprintf(stderr, "error: %s\n", strerror(errno));
+        return B_READALL_ERROR;
+    }
 
     /* Read until no longer possible */
     do
@@ -109,7 +114,7 @@ bIOError bReadCharStream(FILE *in, char **dataptr, size_t *sizeptr)
             if (size <= used) 
             {
                 free(data);
-                return READALL_TOOMUCH;
+                return B_READALL_TOOMUCH;
             }
 
             temp = realloc(data, size);
@@ -117,7 +122,7 @@ bIOError bReadCharStream(FILE *in, char **dataptr, size_t *sizeptr)
             if (temp == NULL) 
             {
                 free(data);
-                return READALL_NOMEM;
+                return B_READALL_NOMEM;
             }
             data = temp;
         }
@@ -133,14 +138,14 @@ bIOError bReadCharStream(FILE *in, char **dataptr, size_t *sizeptr)
     if (ferror(in)) 
     {
         free(data);
-        return READALL_ERROR;
+        return B_READALL_ERROR;
     }
 
     temp = realloc(data, used + 1);
     if (temp == NULL) 
     {
         free(data);
-        return READALL_NOMEM;
+        return B_READALL_NOMEM;
     }
     data = temp;
     data[used] = '\0';
@@ -148,13 +153,13 @@ bIOError bReadCharStream(FILE *in, char **dataptr, size_t *sizeptr)
     *dataptr = data;
     *sizeptr = used;
 
-    return READALL_OK;
+    return B_READALL_OK;
 }
 
 String bLoadCharStream(const char * filepath)
 {
-    FILE * fp;
-    if ((fp = fopen(filepath, "r")) == NULL)
+    FILE * fp = fopen(filepath, "r");
+    if (ferror(fp))
     {
         fprintf(stderr, "error: %s\n", strerror(errno));
         return (String){NULL, 0};
@@ -170,15 +175,41 @@ String bLoadCharStream(const char * filepath)
 
 uint8_t* bLoadByteStream(const char * filepath, size_t *sizeptr)
 {
-    FILE * fp;
-    if ((fp = fopen(filepath, "rb")) == NULL)
+    FILE * fp = fopen(filepath, "rb");
+    if (ferror(fp))
     {
         fprintf(stderr, "error: %s\n", strerror(errno));
         return NULL;
     }
     uint8_t * data;
-    if (bReadByteStream(fp, &data, sizeptr) != READALL_OK)
+    if (bReadByteStream(fp, &data, sizeptr) != B_READALL_OK)
         return NULL;
 
     return data;
+}
+
+bIOError bWriteByteStream(const char * filepath, uint8_t * byte_stream, size_t size)
+{
+    FILE * fp = fopen(filepath, "wb");
+    if (ferror(fp))
+    {
+        fprintf(stderr, "error: %s\n", strerror(errno));
+        return B_READALL_ERROR;
+    }
+    fwrite((void*)byte_stream, 1, size, fp);
+    fclose(fp);
+    return B_READALL_OK;
+}
+
+bIOError bWriteCharStream(const char * filepath, const char * stream, size_t size)
+{
+    FILE * fp = fopen(filepath, "w");
+    if (ferror(fp))
+    {
+        fprintf(stderr, "error: %s\n", strerror(errno));
+        return B_READALL_ERROR;
+    }
+    fwrite((void*)stream, sizeof(char), size, fp);
+    fclose(fp);
+    return B_READALL_OK;
 }

@@ -16,14 +16,16 @@
 
 typedef enum bIOError
 {
-    READALL_OK          =  0,   /* Success */
-    READALL_INVALID     = -1,   /* Invalid parameters */
-    READALL_ERROR       = -2,   /* Stream error */
-    READALL_TOOMUCH     = -3,   /* Too much input */
-    READALL_NOMEM       = -4    /* Out of memory */
+    B_READALL_OK        =  0,   /* Success */
+    B_READALL_INVALID   = -1,   /* Invalid parameters */
+    B_READALL_ERROR     = -2,   /* Stream error */
+    B_READALL_TOOMUCH   = -3,   /* Too much input */
+    B_READALL_NOMEM     = -4    /* Out of memory */
 }
 bIOError;
 
 bIOError bReadByteStream(FILE *in, uint8_t **dataptr, size_t *sizeptr);
 bIOError bReadCharStream(FILE *in, char **dataptr, size_t *sizeptr);
 String bLoadCharStream(const char * filepath);
+bIOError bWriteByteStream(const char * filepath, uint8_t * byte_stream, size_t size);
+bIOError bWriteCharStream(const char * filepath, const char * stream, size_t size);

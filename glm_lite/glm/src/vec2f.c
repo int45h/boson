@@ -45,6 +45,11 @@ float vec2f_length(float v[2])
     return sqrt(v[0]*v[0] + v[1]*v[1]);
 }
 
+float vec2f_length_squared(float v[2])
+{
+    return (v[0]*v[0] + v[1]*v[1]);
+}
+
 void vec2f_normalize(float v[2])
 {
     float inv_mag = 1.f / vec2f_length(v);
@@ -52,34 +57,34 @@ void vec2f_normalize(float v[2])
     v[1] *= inv_mag;
 }
 
-void vec2f_add(float a[2], float b[2])
+void vec2f_add(float a[2], float b[2], float dest[2])
 {
-    b[0] = a[0] + b[0];
-    b[1] = a[1] + b[1];
+    dest[0] = a[0] + b[0];
+    dest[1] = a[1] + b[1];
 }
 
-void vec2f_sub(float a[2], float b[2])
+void vec2f_sub(float a[2], float b[2], float dest[2])
 {
-    b[0] = a[0] - b[0];
-    b[1] = a[1] - b[1];
+    dest[0] = a[0] - b[0];
+    dest[1] = a[1] - b[1];
 }
 
-void vec2f_adds(float a[2], float b)
+void vec2f_adds(float a[2], float b, float dest[2])
 {
-    a[0] += b;
-    a[1] += b;
+    dest[0] = a[0] + b;
+    dest[1] = a[1] + b;
 }
 
-void vec2f_subs(float a[2], float b)
+void vec2f_subs(float a[2], float b, float dest[2])
 {
-    a[0] -= b;
-    a[1] -= b;
+    dest[0] = a[0] - b;
+    dest[1] = a[1] - b;
 }
 
-void vec2f_scale(float v[2], float s)
+void vec2f_scale(float v[2], float s, float dest[2])
 {
-    v[0] *= s;
-    v[1] *= s;
+    dest[0] = v[0] * s;
+    dest[1] = v[1] * s;
 }
 
 vec2f vec2f_add_new(float a[2], float b[2])
@@ -112,10 +117,10 @@ vec2f vec2f_scale_new(float v[2], float s)
                         v[1] * s    };
 }
 
-void vec2f_mul(float a[2], float b[2])
+void vec2f_mul(float a[2], float b[2], float dest[2])
 {
-    b[0] *= a[0];
-    b[1] *= a[1];
+    dest[0] = b[0] * a[0];
+    dest[1] = b[1] * a[1];
 }
 
 vec2f vec2f_mul_new(float a[2], float b[2])
@@ -142,10 +147,17 @@ vec2f vec2f_clamp_new(float a[2], float l[2], float u[2])
                         clampf(a[1], l[1], u[1])    };
 }
 
-vec2f vec2f_lerp_new(float a[2], float b[2], float t, float dest[2])
+vec2f vec2f_lerp_new(float a[2], float b[2], float t)
 {
     return  (vec2f){    lerpf(a[0], b[0], t),
                         lerpf(a[1], b[1], t)    };
+}
+
+vec2f vec2f_normalize_new(float v[2])
+{
+    float inv_mag = 1 / sqrt(v[0]*v[0] + v[1]*v[1]);
+    return (vec2f){ v[0]*inv_mag,
+                    v[1]*inv_mag    };
 }
 
 void vec2f_min(float a[2], float b[2], float dest[2])
@@ -170,4 +182,18 @@ void vec2f_lerp(float a[2], float b[2], float t, float dest[2])
 {
     dest[0] = lerpf(a[0], b[0], t);
     dest[1] = lerpf(a[1], b[1], t);
+}
+
+vec2f vec2f_reflect_new(float v[2], float n[2])
+{
+    float cos_t = v[0]*n[0]+v[1]*n[1];
+    return (vec2f){ v[0]-(2*cos_t*n[0]),
+                    v[1]-(2*cos_t*n[1])};
+}
+
+void vec2f_reflect(float v[2], float n[2], float dest[2])
+{
+    float cos_t = v[0]*n[0]+v[1]*n[1];
+    dest[0] = v[0]-(2*cos_t*n[0]);
+    dest[1] = v[1]-(2*cos_t*n[1]);
 }

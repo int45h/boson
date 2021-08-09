@@ -22,7 +22,15 @@ void bInitRenderer(int major, int minor)
 void bDestroyWindow(Window * w)
 {
     SDL_GL_DeleteContext(w->wContext);
-    SDL_DestroyWindow(w->w);
+    if (w->w != NULL)
+        SDL_DestroyWindow(w->w);
+    if (w->r != NULL)
+        SDL_DestroyRenderer(w->r);
+    if (w->t != NULL)
+        SDL_DestroyTexture(w->t);
+
+    w->width = w->height = 0;
+    w->ar = -1;
 }
 
 Window bCreateWindow(size_t w, size_t h, const char * title)
@@ -33,8 +41,16 @@ Window bCreateWindow(size_t w, size_t h, const char * title)
                                         SDL_WINDOWPOS_CENTERED, 
                                         w, 
                                         h, 
-                                        SDL_WINDOW_OPENGL);
+                                        SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+    disp.r          = SDL_CreateRenderer(disp.w, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    disp.t          = SDL_CreateTexture(disp.r, 
+                                        SDL_PIXELFORMAT_RGBA8888,
+                                        SDL_TEXTUREACCESS_STREAMING,
+                                        w,
+                                        h);
     disp.wContext   = SDL_GL_CreateContext(disp.w);
+    disp.width      = w;
+    disp.height     = h;
     disp.ar         = (float)w / (float)h;
 
     if (disp.wContext == NULL)
@@ -59,19 +75,56 @@ Window bCreateWindow(size_t w, size_t h, const char * title)
     return disp;
 }
 
+void bPushFrameBuffer(const uint32_t * fb, Window * w)
+{
+    SDL_UpdateTexture(w->t, NULL, (void*)fb, w->width*sizeof(uint32_t));
+    SDL_RenderCopy(w->r, w->t, NULL, NULL);
+}
+
+void bRefreshWindow(Window * w)
+{
+    SDL_RenderPresent(w->r);
+}
+
 void bUpdateWindow(Window * w)
 {
     SDL_GL_SwapWindow(w->w);
 }
 
+char bGetKeycode(Window * w)
+{
+    return w->e.key.keysym.sym;
+}
+
+void bResizeWindow(Window * win, size_t w, size_t h)
+{
+    SDL_SetWindowSize(win->w, w, h);
+    win->ar = (float)w/(float)h;
+    win->width  = w;
+    win->height = h;
+}
+
 bEvents bPollEvent(Window * w)
 {
-    if (SDL_PollEvent(&w->e) != 0)
-    {
+    while(SDL_PollEvent(&w->e)){
         switch (w->e.type)
         {
-            case SDL_QUIT:  printf("exiting!\n");   return EXIT;
-            default:        return NONE;
+            case SDL_QUIT:
+            return B_EXIT;
+            case SDL_WINDOWEVENT:   
+                switch (w->e.window.event)
+                {
+                    case SDL_WINDOWEVENT_RESIZED:   
+                    return B_WINDOW_RESIZE;
+                }
+            case SDL_KEYDOWN:
+            return B_KEYDOWN;
+            break;
         }
     }
+}
+
+void bQuit()
+{
+    SDL_Quit();
 }

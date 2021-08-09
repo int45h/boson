@@ -611,7 +611,7 @@ mat4f quatf_to_look_mat4f_new(float eye[3], float ori[4])
     float v_T[4] = {eye[0], eye[1], eye[2], 1};
     mat4f_mul_vec(v_T, m.comp);
     
-    vec4f_scale(v_T, -1);
+    vec4f_scale(v_T, -1, v_T);
 
     mat4f_set_col(v_T, m.comp, 3);
 
@@ -627,7 +627,7 @@ void quatf_to_look_mat4f(float eye[3], float ori[4], float m[16])
     float v_T[4] = {eye[0], eye[1], eye[2], 1};
     mat4f_mul_vec(v_T, m);
     
-    vec4f_scale(v_T, -1);
+    vec4f_scale(v_T, -1, v_T);
 
     mat4f_set_col(v_T, m, 3);
 }
@@ -642,7 +642,7 @@ mat4f quatf_to_look_mat4ft_new(float eye[3], float ori[4])
     float v_T[4] = {eye[0], eye[1], eye[2], 1};
     mat4f_mul_vec(v_T, m.comp);
     
-    vec4f_scale(v_T, -1);
+    vec4f_scale(v_T, -1, v_T);
 
     mat4f_set_row(v_T, m.comp, 3);
 
@@ -658,7 +658,7 @@ void quatf_to_look_mat4ft(float eye[3], float ori[4], float m[16])
     float v_T[4] = {eye[0], eye[1], eye[2], 1};
     mat4f_mul_vec(v_T, m);
     
-    vec4f_scale(v_T, -1);
+    vec4f_scale(v_T, -1, v_T);
 
     mat4f_set_row(v_T, m, 3);
 }

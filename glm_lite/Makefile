@@ -3,7 +3,7 @@ SRC_DIR=./glm/src
 OBJ_DIR=./glm/lib
 
 CC:=gcc
-CFLAGS:=-I$(INC_DIR) -lm
+CFLAGS:=-I$(INC_DIR) -lm -Ofast
 
 DEPS:=		common.h, mat.h, vec.h, quat.h
 

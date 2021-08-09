@@ -9,4 +9,3 @@
 #include "./common/common_float.h"
 #include "./common/common_double.h"
 #include "./common/common_int.h"
-
