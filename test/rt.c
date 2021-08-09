@@ -572,6 +572,7 @@ main(int argc, char ** argv)
                     break;
                 }
                 break;
+                //a
             //case B_WINDOW_RESIZE:
             //    bResizeWindow(&display, 
             //                    display.e.window.data1, 
