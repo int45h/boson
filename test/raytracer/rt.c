@@ -9,6 +9,13 @@
 
 #define tolower(x) x & 0x20
 
+typedef enum materials
+{
+    DIFFUSE,
+    METAL
+}
+materials;
+
 char *
 init_progress_bar(size_t size);
 
@@ -65,6 +72,7 @@ typedef struct object
     OBJ_TYPES   type;
     vec3f       center,
                 albedo;
+    materials   mat;
     float       size;
 }
 object;
@@ -88,7 +96,12 @@ create_world(int max_size)
 }
 
 void
-add_object(world * w, OBJ_TYPES type, vec3f center, vec3f color, float size)
+add_object( world * w, 
+            OBJ_TYPES type, 
+            vec3f center, 
+            vec3f color, 
+            materials mat, 
+            float size)
 {
     if (w->count++ > w->max_size)
     {
@@ -98,6 +111,7 @@ add_object(world * w, OBJ_TYPES type, vec3f center, vec3f color, float size)
     w->objects[w->count-1] = (object){  type,
                                         center,
                                         color,
+                                        mat,
                                         size};
 }
 
@@ -112,9 +126,9 @@ destroy_world(world * w)
 vec3f
 unit_random_new()
 {
-    vec3f rnd = (vec3f){randf_ranged(-1, 1),
-                        randf_ranged(-1, 1),
-                        randf_ranged(-1, 1)    };
+    vec3f rnd = (vec3f){(2*randf() - 1),
+                        (2*randf() - 1),
+                        (2*randf() - 1)    };
     return vec3f_normalize_new(rnd.c);
 }
 
@@ -165,10 +179,11 @@ init_camera(size_t w,
 
 typedef struct hit_record
 {
-    vec3f   hit,
-            normal,
-            albedo;
-    float   root;
+    vec3f       hit,
+                normal,
+                albedo;
+    materials   mat;
+    float       root;
 }
 hit_record;
 
@@ -235,8 +250,8 @@ hit_sphere( vec3f center,
                                         rec->hit.c, 
                                         center.c).c, 
                                     1 / radius);
-    vec3f_adds(rec->normal.c, 1, rec->normal.c);
-    vec3f_scale(rec->normal.c, 0.5, rec->normal.c);
+    //vec3f_adds(rec->normal.c, 1, rec->normal.c);
+    //vec3f_scale(rec->normal.c, 0.5, rec->normal.c);
     return 1;
 }
 
@@ -294,6 +309,7 @@ hit_object(world * w, float t_min, float t_max, ray3f * r, hit_record * rec)
                 closest = tmp.root;
                 *rec    = tmp;
                 rec->albedo = w->objects[i].albedo;
+                rec->mat    = w->objects[i].mat;
             }
             break;
             case PLANE:
@@ -308,6 +324,7 @@ hit_object(world * w, float t_min, float t_max, ray3f * r, hit_record * rec)
                 closest = tmp.root;
                 *rec    = tmp;
                 rec->albedo = w->objects[i].albedo;
+                rec->mat    = w->objects[i].mat;
             }
             break;
         }
@@ -336,8 +353,8 @@ lambert_reflectance(ray3f * r,
                     float fuzz)
 {
     vec3f dest = vec3f_reflect_new(
-                    r->dest.c,
-                    rec->normal.c
+        vec3f_normalize_new(r->dest.c).c,
+        rec->normal.c
     );
     vec3f_add(
         dest.c, 
@@ -358,29 +375,43 @@ ray_color(  ray3f * r,
 {
     hit_record rec;
     if (depth <= 0)
+    {
         return (vec3f){0,0,0};
+    }
     
-    float   factor  = vec3f_normalize_new(r->dest.c).y,
+    float   factor  = 0.5*(vec3f_normalize_new(r->dest.c).y+1),
             fuzz    = 0.25f;
     vec3f   attenuation;
 
     if (hit_object(w, 0.00001, 100, r, &rec))
     {
-        attenuation = rec.normal;
-        float Kd = 0.5;//vec3f_dot(vec3f_normalize_new(r->dest.c).c, rec.normal.c);
-        if (lambert_diffuse(r, &rec))
+        switch (rec.mat)
         {
-            vec3f next_color = vec3f_scale_new(ray_color(
-                r, w, depth-1
-            ).c, Kd);
-            vec3f_mul(attenuation.c, next_color.c, attenuation.c);
+            case DIFFUSE:
+            if (lambert_diffuse(r, &rec))
+            {
+                //float Kd = clampf(vec3f_dot(r->dest.c, rec.normal.c), 0, 1);
+                attenuation = rec.albedo;
+                return vec3f_mul_new(
+                    attenuation.c, 
+                    vec3f_scale_new(ray_color(
+                        r, w, depth-1
+                    ).c, 0.5).c);
+            }
+            else
+                return (vec3f){0,0,0};
+            case METAL:
+            if (lambert_reflectance(r, &rec, 0.f))
+            {
+                attenuation = rec.albedo;
+                return vec3f_mul_new(attenuation.c, ray_color(r, w, depth-1).c);
+            }
+            else
+                return (vec3f){0,0,0};
         }
-        else
-            attenuation = (vec3f){0,0,0};
-        return (attenuation);
     }
     
-    return (attenuation = vec3f_lerp_new(vrgb(0.5, 0.7, 1.0).c, vrgb(1, 1, 1).c, factor));
+    return (attenuation = vec3f_lerp_new(vrgb(0.5, 0.7, 1.0).c, vrgb(1, 1, 1).c, 1-factor));
 }
 
 void 
@@ -397,8 +428,8 @@ draw_scene(uint32_t * fb, camera * c, world * w, int spp, int depth)
         for (int s = spp; s > 0; s--)
         {
             r       = fire_ray_from_camera( c, 
-                                            x+randf_ranged(-1, 1), 
-                                            y+randf_ranged(-1, 1));
+                                            x+randf(), 
+                                            y+randf());
             color   = ray_color(&r, w, depth);
             
             vec3f_add(color.c, out.c, out.c);
@@ -541,10 +572,11 @@ main(int argc, char ** argv)
                             1, 
                             (vec3f){0,0,0});
     
-    world w = create_world(2);
-    add_object(&w, SPHERE, (vec3f){0,0,-5}, vrgb(1,0,0), 2);
+    world w = create_world(3);
+    add_object(&w, SPHERE, (vec3f){2,0,-5}, vrgb(0.5,0.4,0), METAL, 2);
+    add_object(&w, SPHERE, (vec3f){-2,0,-5}, vrgb(1,0,0), DIFFUSE, 1);
     //add_object(&w, PLANE, (vec3f){0,1,-10}, vrgb(1,0,0), 2);
-    add_object(&w, SPHERE, (vec3f){0,-102,-9}, vrgb(1,1,0), 100);
+    add_object(&w, SPHERE, (vec3f){0,-102,-9}, vrgb(1,1,0), DIFFUSE, 100);
 
     draw_scene(fb, &c, &w, spp, depth);
     bPushFrameBuffer(fb, &display);
@@ -572,7 +604,6 @@ main(int argc, char ** argv)
                     break;
                 }
                 break;
-                //a
             //case B_WINDOW_RESIZE:
             //    bResizeWindow(&display, 
             //                    display.e.window.data1, 
